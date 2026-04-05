@@ -94,7 +94,8 @@
 
         /* Message Formatting */
         .msg-content a { color: var(--accent); text-decoration: underline; }
-        .msg-anchor { color: var(--accent); cursor: pointer; font-weight: bold; background: rgba(59, 130, 246, 0.1); padding: 0 4px; border-radius: 4px; }
+        .msg-anchor { color: var(--accent); cursor: pointer; font-weight: bold; background: rgba(59, 130, 246, 0.1); padding: 0 4px; border-radius: 4px; transition: background 0.2s; }
+        .msg-anchor:hover { background: rgba(59, 130, 246, 0.2); }
         .msg-bold { font-weight: bold; }
         .msg-italic { font-style: italic; }
         .msg-underline { text-decoration: underline; }
@@ -253,7 +254,7 @@
     <header class="card shadow-md z-10 p-4 flex justify-between items-center h-16 shrink-0">
         <div class="flex items-center gap-2 cursor-pointer" onclick="app.router.navigate('')">
             <!-- Logo: Reset to nablog2.png -->
-            <img src="./Nablogbet.png" 
+            <img src="./nablog2.png" 
                  alt="Nablachat Logo" 
                  class="h-10 object-contain hover:opacity-80 transition"
                  onerror="this.style.display='none'; document.getElementById('fallback-logo').style.display='flex';">
@@ -333,7 +334,7 @@
             </div>
 
             <!-- Messages Area -->
-            <div id="chat-messages" class="flex-1 overflow-y-auto p-4 space-y-6 bg-gray-50 dark:bg-gray-900">
+            <div id="chat-messages" class="flex-1 overflow-y-auto p-4 space-y-6 bg-gray-50 dark:bg-gray-900 scroll-smooth">
                 <!-- Messages injected here -->
             </div>
 
@@ -352,6 +353,13 @@
                             <i class="fa-solid fa-underline"></i>
                         </button>
                         
+                        <button type="button" onclick="app.ui.insertTag('# ', '')" class="p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 transition" title="大見出し (H1)">
+                            <i class="fa-solid fa-heading"></i>1
+                        </button>
+                        <button type="button" onclick="app.ui.insertTag('## ', '')" class="p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 transition" title="中見出し (H2)">
+                            <i class="fa-solid fa-heading"></i>2
+                        </button>
+
                         <!-- Simplified Color Selection -->
                         <div class="flex gap-1 items-center mx-1">
                             <button type="button" onclick="app.ui.insertColor('#ef4444')" class="w-5 h-5 rounded-full bg-red-500 hover:scale-110 transition shadow-sm border border-gray-300" title="赤"></button>
@@ -517,6 +525,8 @@
                 <section>
                     <h4 class="font-bold text-lg mb-2 text-blue-400">文字の装飾</h4>
                     <ul class="list-disc pl-5 space-y-2 text-gray-300">
+                        <li><b>見出し(大)</b>: 行頭に <code># 見出しテキスト</code> を入力（H1相当）</li>
+                        <li><b>見出し(中)</b>: 行頭に <code>## 見出しテキスト</code> を入力（H2相当）</li>
                         <li><b>太字</b>: <code>**文字**</code> → <b>文字</b></li>
                         <li><i>斜体</i>: <code>*文字*</code> → <i>文字</i></li>
                         <li><u>下線</u>: <code>__文字__</code> → <u>文字</u></li>
@@ -524,7 +534,7 @@
                         <li>ネタバレ防止: <code>||文字||</code> → <span class="bg-gray-700 text-gray-700 px-1 rounded cursor-pointer select-none hover:text-white transition-colors">文字</span> (クリックで表示)</li>
                         <li>コード: <code>`文字`</code> → <code class="bg-gray-800 px-1 rounded border border-gray-700 font-mono text-pink-400">文字</code> (等幅フォント・装飾なし)</li>
                         <li>装飾無効: <code>\[文字]</code> → そのまま表示</li>
-                        <li>アンカー: <code>>>1</code> → 指定した番号の書き込みへリンク</li>
+                        <li>アンカー: <code>>>1</code> → 指定した番号の書き込みへリンク（クリックで該当メッセージへスクロール）</li>
                     </ul>
                 </section>
                 <section>
@@ -841,13 +851,31 @@
                     container.scrollTop = container.scrollHeight;
                 },
 
+                // FIXED: Anchor Link functionality and scrolling
                 highlightMessage(num) {
                     const el = document.getElementById(`msg-${num}`);
                     if (el) {
+                        // 確実なスクロールのためにscrollIntoViewを使用（画面の中央にビシッと止めます）
                         el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                        // Simple highlight without GSAP
-                        el.style.backgroundColor = "rgba(59, 130, 246, 0.2)";
-                        setTimeout(() => el.style.backgroundColor = "transparent", 2000);
+
+                        // Target the card directly for highlighting
+                        const card = el.querySelector('.card');
+                        if (card) {
+                            const origBg = card.style.backgroundColor;
+                            const origTransition = card.style.transition;
+                            
+                            // Apply a noticeable highlight
+                            card.style.transition = "background-color 0.3s ease";
+                            card.style.backgroundColor = "rgba(59, 130, 246, 0.4)"; 
+                            
+                            // Revert after 2 seconds
+                            setTimeout(() => {
+                                card.style.backgroundColor = origBg || "";
+                                setTimeout(() => card.style.transition = origTransition, 300);
+                            }, 2000);
+                        }
+                    } else {
+                        console.warn(`[Nablachat] Message anchor target not found: msg-${num}`);
                     }
                 },
 
@@ -1546,7 +1574,7 @@ service cloud.firestore {
                         
                         // BGM Logic for funnycat
                         if (roomId === 'funnycat') {
-                             app.logic.playBGM('1161090_Funny-Cat.mp3');
+                             app.logic.playBGM('1161090_Funny-cat.mp3');
                         }
                     }
 
@@ -1610,6 +1638,7 @@ service cloud.firestore {
                     let safeContent = app.logic.escapeHtml(msg.content);
 
                     // --- NEW: Advanced Formatting with Placeholders ---
+                    // 他の装飾と喧嘩しないように、一旦すべてのタグを安全なプレースホルダーに避難させます！
                     const placeholders = [];
                     const addPlaceholder = (text) => {
                         placeholders.push(text);
@@ -1622,19 +1651,28 @@ service cloud.firestore {
                     // 2. Inline Code `...`
                     safeContent = safeContent.replace(/`(.*?)`/g, (match, p1) => addPlaceholder(`<code class="inline-code">${p1}</code>`));
 
-                    // 3. Normal Formatting
+                    // 3. Headings (Markdown style)
+                    // H2 (## )
+                    safeContent = safeContent.replace(/^##\s+(.*?)$/gm, (match, p1) => addPlaceholder(`<h2 class="text-xl font-bold text-gray-800 dark:text-gray-100 mt-4 mb-2 border-b border-gray-200 dark:border-gray-700 pb-1">${p1}</h2>`));
+                    // H1 (# )
+                    safeContent = safeContent.replace(/^#\s+(.*?)$/gm, (match, p1) => addPlaceholder(`<h1 class="text-2xl font-bold text-gray-900 dark:text-white mt-5 mb-3 border-b-2 border-gray-300 dark:border-gray-600 pb-2">${p1}</h1>`));
+
+                    // 4. Normal Formatting (すべてプレースホルダー化して完全保護！)
                     // Spoiler ||...||
-                    safeContent = safeContent.replace(/\|\|(.*?)\|\|/g, '<span class="spoiler" onclick="this.classList.toggle(\'revealed\')">$1</span>');
+                    safeContent = safeContent.replace(/\|\|(.*?)\|\|/g, (match, p1) => addPlaceholder(`<span class="spoiler" onclick="this.classList.toggle('revealed')">${p1}</span>`));
                     
-                    safeContent = safeContent.replace(/>>(\d+)/g, '<span class="msg-anchor" onclick="app.ui.highlightMessage($1)">>>$1</span>');
-                    safeContent = safeContent.replace(/\*\*(.*?)\*\*/g, '<span class="msg-bold">$1</span>');
-                    safeContent = safeContent.replace(/\*(.*?)\*/g, '<span class="msg-italic">$1</span>');
-                    safeContent = safeContent.replace(/__(.*?)__/g, '<span class="msg-underline">$1</span>');
-                    safeContent = safeContent.replace(/#color:\[([a-zA-Z0-9#]+)\]\((.*?)\)/g, '<span style="color:$1">$2</span>');
-                    safeContent = safeContent.replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>');
+                    // FIXED: &gt; is the escaped version of >
+                    // さらに全角の「＞＞」にも対応！もう打ち間違えてもリンクになります！
+                    safeContent = safeContent.replace(/(&gt;&gt;|＞＞)(\d+)/g, (match, p1, p2) => addPlaceholder(`<span class="msg-anchor" onclick="app.ui.highlightMessage(${p2})">&gt;&gt;${p2}</span>`));
+                    
+                    safeContent = safeContent.replace(/\*\*(.*?)\*\*/g, (match, p1) => addPlaceholder(`<span class="msg-bold">${p1}</span>`));
+                    safeContent = safeContent.replace(/\*(.*?)\*/g, (match, p1) => addPlaceholder(`<span class="msg-italic">${p1}</span>`));
+                    safeContent = safeContent.replace(/__(.*?)__/g, (match, p1) => addPlaceholder(`<span class="msg-underline">${p1}</span>`));
+                    safeContent = safeContent.replace(/#color:\[([a-zA-Z0-9#]+)\]\((.*?)\)/g, (match, p1, p2) => addPlaceholder(`<span style="color:${p1}">${p2}</span>`));
+                    safeContent = safeContent.replace(/(https?:\/\/[^\s<]+)/g, (match, p1) => addPlaceholder(`<a href="${p1}" target="_blank" rel="noopener noreferrer">${p1}</a>`));
                     safeContent = safeContent.replace(/\n/g, '<br>');
 
-                    // 4. Restore Placeholders
+                    // 5. Restore Placeholders (安全な状態になってから復元！)
                     safeContent = safeContent.replace(/%%%PH_(\d+)%%%/g, (match, id) => placeholders[id]);
                     // --------------------------------------------------
 
@@ -1758,6 +1796,8 @@ service cloud.firestore {
             this.style.height = (this.scrollHeight) + 'px';
         });
 
+        // CRITICAL: Ensure `app` is available in global scope for inline event handlers
+        window.app = app;
         window.onload = app.init;
     </script>
 </body>
